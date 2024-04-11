@@ -31,4 +31,5 @@
     /rosout  
 
     $ ros2 topic echo /fix  
+    $ ros2 topic info /fix --verbose  
 
