@@ -7,7 +7,7 @@
   PC and OrangePi 5 (Armbian and ubuntu 22.04)  
   ros2:humble  
   
-  参照: [自作 Turtlebot3 自律走行に向けたプログラム。#14](http://www.netosa.com/blog/2022/09/-turtlebot3-14.html)  
+  参照: [QUECTEL LC29H GNSS L1 L5 Receiver 使えるのか検討してみた。](http://www.netosa.com/blog/2024/02/gnss-l1-l5-receiver.html)  
 
 #### 1. down load and build.  
 
@@ -17,7 +17,7 @@
     $ colcon build --symlink-install [--parallel-workers 1] --packages-select lc29h_gps  
     $ . install/setup.bash  
 
-#### 2. run on SBC(Jetson Nano 2G)  
+#### 2. run on SBC(Armibian orangePi 5)  
 
     $ sudo chmod 777 /dev/ttyUSB0  
     $ ros2 launch lc29h_gps lc29h_gps.launch.py  
