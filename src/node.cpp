@@ -161,15 +161,20 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
     std::string str = "";
   
     // StringListの生成(簡易)
-    std::string list[30];
-    for (i = 0; i < 30; i++) {
+    //std::string list[30];
+    int lng=50;
+    std::string list[lng];
+    for (i = 0; i < lng; i++) {
       list[i] = "";
     }
- 
+
+
     // 「,」を区切り文字として文字列を配列にする
     for (i = 0; i < len; i++) {
       if (data[i] == ',') {
         list[index++] = str;
+        if(index >= lng)
+          break;
         str = "";
         continue;
       }

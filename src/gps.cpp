@@ -81,7 +81,7 @@ void Gps::initializeSerial(std::string port, unsigned int baudrate,
     tcsetattr(fd, TCSANOW, &tio);
   }
 
-  //#define SET_CONFIG
+  #define SET_CONFIG
   #if defined(SET_CONFIG)
   // Set the I/O worker
   //if (worker_) return;
@@ -106,7 +106,8 @@ void Gps::initializeSerial(std::string port, unsigned int baudrate,
         boost::posix_time::milliseconds(kSetBaudrateSleepMs));
     serial->get_option(current_baudrate);
     //ROS_DEBUG("Gysfdmaxb: Set ASIO baudrate to %u", current_baudrate.value());
-    ROS_INFO("Lc29h: Set ASIO baudrate to %u", current_baudrate.value());
+    //ROS_INFO("Lc29h: Set ASIO baudrate to %u", current_baudrate.value());
+    RCLCPP_INFO(node_->get_logger(),"Lc29h: Set ASIO baudrate to %u", current_baudrate.value());
   }
   //if (config_on_startup_flag_) {
   //  configured_ = configUart1(baudrate, uart_in, uart_out);
