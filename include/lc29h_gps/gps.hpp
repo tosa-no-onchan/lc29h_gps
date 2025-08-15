@@ -157,6 +157,8 @@ class Gps {
 
   FncChar fncChar_;
 
+  int gga_status_;  // GGA[6] Status add by nnishi 2025.8.12
+
 
  private:
     bool ok;

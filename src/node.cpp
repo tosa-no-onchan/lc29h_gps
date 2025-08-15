@@ -14,21 +14,22 @@ using namespace lc29h_gps;
 using namespace boost::placeholders;
 
 //#define USE_BUNKAI
-
-#ifdef USE_BUNKAI
+#if defined(USE_BUNKAI)
 // NMEAの緯度経度を「度分秒」(DMS)の文字列に変換する
 std::string NMEA2DMS(float val) {
   int d = val / 100;
   int m = ((val / 100.0) - d) * 100.0;
   float s = ((((val / 100.0) - d) * 100.0) - m) * 60;
-  return std::to_string(d) + "度" + std::to_string(m) + "分" + std::to_string(s, 1) + "秒";
+  //return std::to_string(d) + "度" + std::to_string(m) + "分" + std::to_string(s, 1) + "秒";
+  return std::to_string(d) + ":" + std::to_string(m) + ":" + std::to_string(s);
 }
  
 // (未使用)NMEAの緯度経度を「度分」(DM)の文字列に変換する
 std::string NMEA2DM(float val) {
   int d = val / 100;
   float m = ((val / 100.0) - d) * 100.0;
-  return std::to_string(d) + "度" + std::to_string(m, 4) + "分";
+  //return std::to_string(d) + "度" + std::to_string(m, 4) + "分";
+  return std::to_string(d) + ":" + std::to_string(m) + ":";
 }
  
 // NMEAの緯度経度を「度」(DD)の文字列に変換する
@@ -36,17 +37,21 @@ std::string NMEA2DD(float val) {
   int d = val / 100;
   int m = (((val / 100.0) - d) * 100.0) / 60;
   float s = (((((val / 100.0) - d) * 100.0) - m) * 60) / (60 * 60);
-  return std::to_string(d + m + s, 6);
+  //return std::to_string(d + m + s, 6);
+  return std::to_string(d + m + s);
 }
  
 // UTC時刻から日本の標準時刻に変換する(GMT+9:00)
 std::string UTC2GMT900(std::string str) {
-  int hh = (str.substring(0,2).toInt()) + 9;
+  //int hh = (str.substring(0,2).toInt()) + 9;
+  int hh = (std::stoi(str.substr(0,2))) + 9;
   if(hh > 24) hh = hh - 24;
  
-  return std::to_string(hh,DEC) + ":" + str.substring(2,4) + ":" + str.substring(4,6);  
+  //return std::to_string(hh,DEC) + ":" + str.substring(2,4) + ":" + str.substring(4,6);  
+  return std::to_string(hh) + ":" + str.substr(2,4) + ":" + str.substr(4,6);  
 }
 #endif
+
 
 //------------------------
 // lc29h ROS2 Node
@@ -120,12 +125,14 @@ void Lc29hNode::getRosParams() {
   // Measurement rate params
   //nh->param("rate", rate_, 1);  // in Hz
   node_->declare_parameter<int>("rate",1);
+  // add by nishi 2025.8.12
+  node_->declare_parameter<bool>("use_dgns",true);
 
   node_->get_parameter<std::string>("device",device_);
   node_->get_parameter<std::string>("frame_id",frame_id_);
   node_->get_parameter<std::string>("topicName",fix_topic_);
   node_->get_parameter<int>("rate",rate_);
-
+  node_->get_parameter<bool>("use_dgns",use_dgns_);
 
   //if (enable_ppp_)
   //  ROS_WARN("Warning: PPP is enabled - this is an expert setting.");
@@ -183,12 +190,29 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
     
     // $GPGGAセンテンスのみ読み込む
     //if (list[0] == "$GPGGA") {
-    if (list[0] == "$GNGGA") {
+    if (list[0] == "$GNGGA" && index < 30) {
       //std::cout << " get $GNGGA:" << std::endl;
       //std::cout << " list[6]:" << list[6] << std::endl;
 
+      int gga_num;
+      try{
+        gps.gga_status_=std::stoi(list[6]);
+        gga_num = std::stoi(list[7]);
+      }
+      //catch(std::invalid_argument &e){
+      catch (...){
+        gps.gga_status_=0;
+        gga_num = 0;
+      }
+
+      std::cout << "GGA.status:" << gps.gga_status_ << std::endl;
+
       // ステータス
-      if(list[6] != "0"){      
+      //if(list[6] != "0"){
+      if(use_dgns_==true && (gps.gga_status_!=2 && gps.gga_status_!=4 && gps.gga_status_!=5)){
+        return;
+      }
+      if(gps.gga_status_ == 1 || gps.gga_status_==2 ||gps.gga_status_==4 || gps.gga_status_==5){      
 
         // set up Ros Publish part
         fix_ =std::make_shared<sensor_msgs::msg::NavSatFix>();
@@ -198,43 +222,64 @@ void Lc29hNode::publish_nmea_str(std::string& data) {
 
         fix_->header.frame_id = frame_id_;
 
-        #ifdef USE_BUNKAI
+        #if defined(USE_BUNKAI)
+          // 現在時刻
+          //Serial.print(UTC2GMT900(list[1]));
+          std::cout << UTC2GMT900(list[1]);
+          
+          // 緯度:latitude
+          std::cout <<" 緯度:";
 
-        // 現在時刻
-        //Serial.print(UTC2GMT900(list[1]));
-        std::cout << UTC2GMT900(list[1]);
-        
-        // 緯度:latitude
-        std::cout <<" 緯度:";
-
-        std::cout << NMEA2DMS(std::stof(list[2]));
-        std::cout << "(";
-        std::cout << NMEA2DD(std::stof(list[2]));
-        std::cout <<")";
- 
-        // 経度:longitude
-        std::cout <<" 経度:";
-        std::cout << NMEA2DMS(std::stof(list[4]));
-        std::cout << "(";
-        std::cout << NMEA2DD(std::stof(list[4]));
-        std::cout <<")";
- 
-        // 海抜:altitude
-        std::cout <<" 海抜:";
-        std::cout << list[9]; 
-        //list[10].toLowerCase();
-        std::cout <<list[10] << std::endl;
+          std::cout << NMEA2DMS(std::stof(list[2]));
+          std::cout << "(";
+          std::cout << NMEA2DD(std::stof(list[2]));
+          std::cout <<")";
+  
+          // 経度:longitude
+          std::cout <<" 経度:";
+          std::cout << NMEA2DMS(std::stof(list[4]));
+          std::cout << "(";
+          std::cout << NMEA2DD(std::stof(list[4]));
+          std::cout <<")";
+  
+          // 海抜:altitude
+          std::cout <<" 海抜:";
+          std::cout << list[9]; 
+          //list[10].toLowerCase();
+          std::cout <<list[10] << std::endl;
         #else
-        //std::cout <<  data << std::endl;
-
+          //std::cout <<  data << std::endl;
         #endif
 
         //fix_.header.stamp = ros::Time::now();
         fix_->header.stamp = node_->now();
+
+        double lati,longi;
+
         try{
-          fix_->latitude  = std::stof(list[2])/100.0;  // 緯度
-          fix_->longitude = std::stof(list[4])/100.0;  // 経度
+          //fix_->latitude  = std::stof(list[2])/100.0;  // 緯度
+          //fix_->longitude = std::stof(list[4])/100.0;  // 経度
           fix_->altitude  = std::stof(list[9]);  // 高度、海抜
+
+          // chnaged by nishi 2025.8.9
+          lati  = std::stod(list[2]);  // 緯度
+          longi = std::stod(list[4]);  // 経度
+
+          //#define DEBUG_CHECK_NMEA
+          #if defined(DEBUG_CHECK_NMEA)
+            std::cout <<"NMEA lat:"<<list[2] <<" longi:"<< list[4] <<std::endl;
+            std::cout <<"lati:"<< std::fixed << std::setprecision(8) << lati << " longi:"<< std::fixed << std::setprecision(8) << longi << std::endl;
+          #endif
+          double lati_m = std::fmod(lati,100.0)/60.0;
+          double longi_m = std::fmod(longi,100.0)/60.0;
+
+          fix_->latitude = std::floor(lati/100.0) + lati_m;   // 緯度
+          fix_->longitude = std::floor(longi/100.0) + longi_m;  // 経度
+
+          #if defined(DEBUG_CHECK_NMEA)
+            std::cout <<"fix_->latitude:"<< std::fixed << std::setprecision(10) << fix_->latitude << " fix_->longitude:"<< fix_->longitude << std::endl;
+          #endif
+
         }
         catch (...){
           // std::stof error

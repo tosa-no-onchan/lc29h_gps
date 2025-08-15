@@ -23,8 +23,9 @@ def generate_launch_description():
 
         DeclareLaunchArgument('device', default_value='/dev/ttyUSB0', description=''),
         DeclareLaunchArgument('frame_id', default_value='gps_link', description=''),
-        DeclareLaunchArgument('rate', default_value='6', description=''),
+        DeclareLaunchArgument('rate', default_value='1', description=''),
         DeclareLaunchArgument('topicName', default_value='fix', description=''),
+        DeclareLaunchArgument('use_dgns', default_value='false', description=''),
         Node(
             package='lc29h_gps',
             executable='lc29h_gps_node',
@@ -35,6 +36,7 @@ def generate_launch_description():
                          "frame_id": LaunchConfiguration('frame_id'),
                          "rate": LaunchConfiguration('rate'),
                          "topicName": LaunchConfiguration('topicName'),
+                         "use_dgns": LaunchConfiguration('use_dgns'),
                          }
             ]
         )
